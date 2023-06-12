@@ -32,12 +32,20 @@ async function run() {
     await client.connect();
    
     const classes = client.db("GlobelSpeck").collection('classes');
+    const instructors = client.db("GlobelSpeck").collection('Instructors');
 
     app.get('/classes', async(re1, res) => {
  
-      const result = await classes.find().toArray();
+      const result = await classes.find().sort({"enrollStudents" : -1}).limit(6).toArray();
       res.send(result)
  
+    })
+
+    app.get('/instructor', async(req, res) => {
+
+      const result = await instructors.find().limit(6).toArray();
+      res.send(result)
+
     })
 
 
