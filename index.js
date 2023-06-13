@@ -33,32 +33,69 @@ async function run() {
    
     const classes = client.db("GlobelSpeck").collection('classes');
     const instructors = client.db("GlobelSpeck").collection('Instructors');
+    const user = client.db("GlobelSpeck").collection('user');
+    const Addtocart = client.db("GlobelSpeck").collection('AddCart');
+
+
+    app.post('/Addclass', async(req, res) => {
+
+        const classData = req.body;
+        console.log(classData)
+        const result = await Addtocart.insertOne(classData)
+        res.send(result)
+    })
+    app.get('/showClass', async(req, res) => {
+
+        const useremail = req.query.email;
+
+        const queryuser = {email:useremail} 
+        console.log(queryuser)        
+        const result = await Addtocart.find(queryuser).toArray()
+        res.send(result)
+    })
+
+
+    app.post('/user', async(req, res) => {
+
+       const userData = req.body
+       const email = req.body.email
+          
+       const query = {email : email}
+       const checkemail  = await user.findOne(query)
+       console.log(checkemail)
+
+       if(checkemail){
+         res.send('email allready axist')
+         return
+       }
+       
+       console.log(userData)
+       const result = await user.insertOne(userData)
+       res.send(result)
+
+    })
 
     app.get('/classes', async(re1, res) => {
-       
+
       const result = await classes.find().sort({"enrollStudents" : -1}).limit(6).toArray();
-      res.send(result)
- 
+      res.send(result) 
     })
     app.get('/Allclasses', async(re1, res) => {
 
       const result = await classes.find().toArray();
-      res.send(result)
- 
+      res.send(result)      
     })
 
     app.get('/instructor', async(req, res) => {
 
       const result = await instructors.find().limit(6).toArray();
       res.send(result)
-
     })
 
     app.get('/Allinstructor', async(req, res) => {
 
       const result = await instructors.find().toArray();
       res.send(result)
-
     })
 
 
