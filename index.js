@@ -34,14 +34,31 @@ async function run() {
     const classes = client.db("GlobelSpeck").collection('classes');
     const instructors = client.db("GlobelSpeck").collection('Instructors');
     const user = client.db("GlobelSpeck").collection('user');
-    const Addtocart = client.db("GlobelSpeck").collection('AddCart');
+    const AddtoClass = client.db("GlobelSpeck").collection('AddCart');
 
+
+
+    // jwt token genaret 
+    app.get('/Jwt',(req,res)=>{
+      
+      
+
+    })
+
+     
 
     app.post('/Addclass', async(req, res) => {
 
-        const classData = req.body;
-         
-        const result = await Addtocart.insertOne(classData)
+        const classData = req.body;         
+        const result = await AddtoClass.insertOne(classData)
+        res.send(result)
+    })
+
+    // class add with instructor 
+    app.post('/Addtoclass', async(req, res) => {
+
+        const classData = req.body;         
+        const result = await classes.insertOne(classData)
         res.send(result)
     })
     app.delete('/deletAddclass', async(req, res) => {
@@ -51,6 +68,16 @@ async function run() {
         const result = await Addtocart.deleteOne(query)
         res.send(result)
     })
+    app.delete('/deletClass/:id', async(req, res) => {
+        const id = req.params.id
+        console.log(id)
+        const query = { _id : new ObjectId(id)}
+        const result = await classes.deleteOne(query)
+        res.send(result)
+    })
+
+    
+
     app.get('/user', async(req, res) => {
 
       const result = await user.find().toArray();
@@ -63,8 +90,7 @@ async function run() {
       const updateData = req.body.Updated
        
       const options = { upsert: true };
-      const updateDoc = {    
-        
+      const updateDoc = {           
         $set: {
           role : updateData 
         },
@@ -88,6 +114,15 @@ async function run() {
             
         const result = await Addtocart.find(queryuser).toArray()
         res.send(result)
+    })
+
+    app.get('/insMyclass', async(req, res)=>{
+
+          const email = req.query.email
+          const check = {instructorEmail : email}
+          const result = await classes.find(check).toArray()
+          res.send(result)
+
     })
 
 
@@ -140,16 +175,6 @@ async function run() {
       const result = await instructors.find().toArray();
       res.send(result)
     })
-
-
-
-
-
-
-
-
-
-
 
 
 
