@@ -2,7 +2,7 @@ const express = require('express');
 const app = express();
 const cors = require('cors');
 require('dotenv').config()
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const PORT = process.env.PORT || 5000
 
 // wadelwere 
@@ -40,16 +40,52 @@ async function run() {
     app.post('/Addclass', async(req, res) => {
 
         const classData = req.body;
-        console.log(classData)
+         
         const result = await Addtocart.insertOne(classData)
         res.send(result)
     })
+    app.delete('/deletAddclass', async(req, res) => {
+        const id = req.body.id
+        console.log(id)
+        const query = { _id : new ObjectId(id)}
+        const result = await Addtocart.deleteOne(query)
+        res.send(result)
+    })
+    app.get('/user', async(req, res) => {
+
+      const result = await user.find().toArray();
+      res.send(result)
+        
+    })
+    app.patch('/userAdmin/:id', async(req, res) => {
+
+      const userid = req.params.id
+      const updateData = req.body.Updated
+       
+      const options = { upsert: true };
+      const updateDoc = {    
+        
+        $set: {
+          role : updateData 
+        },
+            
+      };
+      const filter = {
+        _id: new ObjectId(userid) 
+      }
+      console.log(filter)
+      
+      const result = await user.updateOne(filter, updateDoc, options)
+      res.send(result)
+        
+    })
+
+    // user class show with email query 
     app.get('/showClass', async(req, res) => {
 
         const useremail = req.query.email;
-
         const queryuser = {email:useremail} 
-        console.log(queryuser)        
+            
         const result = await Addtocart.find(queryuser).toArray()
         res.send(result)
     })
@@ -80,8 +116,15 @@ async function run() {
       const result = await classes.find().sort({"enrollStudents" : -1}).limit(6).toArray();
       res.send(result) 
     })
-    app.get('/Allclasses', async(re1, res) => {
+    app.get('/Allclasses', async(req, res) => {
 
+      const query = {status : "approved"}
+      const result = await classes.find(query).toArray();
+      res.send(result)      
+    })
+    app.get('/AllclassesAdmin', async(req, res) => {
+
+      
       const result = await classes.find().toArray();
       res.send(result)      
     })
