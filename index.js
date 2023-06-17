@@ -13,6 +13,9 @@ console.log(process.env.STRIPE_SECRET)
 app.use(cors());
 app.use(express.json())
 
+
+
+
 // jwt wedelwere 
 const verifyjwt = (req, res, next) => {
 
