@@ -61,9 +61,10 @@ async function run() {
     await client.connect();
    
     const classes = client.db("GlobelSpeck").collection('classes');
-    const instructors = client.db("GlobelSpeck").collection('Instructors');
+    const payment = client.db('GlobelSpeck').collection('payment') 
     const user = client.db("GlobelSpeck").collection('user');
     const AddtoClass = client.db("GlobelSpeck").collection('AddCart');
+
 
 
 
@@ -299,7 +300,53 @@ async function run() {
         clientSecret: paymentIntent.client_secret,
       });
     });
+
+// payment insert 
+    app.post('/payment', verifyjwt, async(req,res)=>{
+
+      const {user, email, tranjecttionId, price, cartName, cartImage} = req.body;
+
+      const paymentData = {
+        user,
+        email,
+        tranjecttionId,
+        price,
+        cartName,
+        cartImage
+      }
+
+      
+      const result = await payment.insertOne(paymentData)
+      res.send((result))
+
+    })
+
+
+    app.patch('/updateEnroll/:accessId', async(req,res)=>{
+
+      const accessId = req.params.accessId;
+      console.log(accessId)
+      const filter = {_id : new ObjectId(accessId) }
+      const undatedoc =  { 
+        $inc: { 
+          availableSeats: -1 ,
+          enrollStudents: 1 
+       }
+      }
+      const option = {upsert : true}
+
+      const result = await classes.updateOne(filter, undatedoc, option)
+      res.send(result)
+
+    })
     
+    app.get('/PaymentHistory/:email',verifyjwt, async(req,res)=>{
+
+      const email = req.params.email
+      const result = await payment.find({email : email}).toArray()
+      res.send(result)
+
+    })
  
 
 
