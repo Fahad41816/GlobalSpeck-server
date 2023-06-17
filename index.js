@@ -4,13 +4,41 @@ const cors = require('cors');
 require('dotenv').config()
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken')
+const stripe = require("stripe")(process.env.STRIPE_SECRET);
 const PORT = process.env.PORT || 5000
+
+console.log(process.env.STRIPE_SECRET)
 
 // wadelwere 
 app.use(cors());
 app.use(express.json())
 
+// jwt wedelwere 
+const verifyjwt = (req, res, next) => {
 
+  const authorization = req.headers.authorization;
+  console.log(authorization)
+  if(!authorization){
+
+    return res.status(401).send({error: true, message: "unauthorized access token"})
+
+  }
+ 
+  // bearer token 
+  const token = authorization.split(' ')[1]
+  
+  jwt.verify(token, process.env.JWT_ACCESS_TOKEN, (err, decoded) =>{
+
+    if(err){      
+     return res.status(401).send({error: true, message: "unauthorized access"})
+    }
+
+    req.decoded = decoded
+
+    next()
+
+  })
+}
 
 
  
@@ -48,9 +76,25 @@ async function run() {
 
     })
 
+
+
+    app.get("/user/Role/:email", verifyjwt, async(req, res) => {
+
+      const email = req.params.email;    
+      console.log(email)  
+      if(req.decoded.email !== email){
+        return res.status(401).send({error: true, message: "forbidden request"})
+      }
+      const query = {email:email}
+      const userRole = await user.findOne(query)
+
+      console.log(userRole)
+      res.send(userRole.role)
+
+    })
      
 
-    app.post('/Addclass', async(req, res) => {
+    app.post('/Addclass',  async(req, res) => {
 
         const classData = req.body;         
         const result = await AddtoClass.insertOne(classData)
@@ -58,20 +102,21 @@ async function run() {
     })
 
     // class add with instructor 
-    app.post('/Addtoclass', async(req, res) => {
+    app.post('/Addtoclass',  async(req, res) => {
 
-        const classData = req.body;         
+        const classData = req.body;       
+        console.log(classData)  
         const result = await classes.insertOne(classData)
         res.send(result)
     })
-    app.delete('/deletAddclass', async(req, res) => {
+    app.delete('/deletAddclass',  async(req, res) => {
         const id = req.body.id
         console.log(id)
         const query = { _id : new ObjectId(id)}
-        const result = await Addtocart.deleteOne(query)
+        const result = await AddtoClass.deleteOne(query)
         res.send(result)
     })
-    app.delete('/deletClass/:id', async(req, res) => {
+    app.delete('/deletClass/:id',  async(req, res) => {
         const id = req.params.id
         console.log(id)
         const query = { _id : new ObjectId(id)}
@@ -79,15 +124,61 @@ async function run() {
         res.send(result)
     })
 
+
+    app.patch('/ApproveClass/:id', async(req,res)=>{
+
+      const classId = req.params.id
+       
+      const filter = {_id : new ObjectId(classId)}
+      
+      const options = { upsert: true };
+      const updatedoc = {
+        $set:{
+           status: "approved"
+        }
+      }
+
+      const result = await classes.updateOne(filter, updatedoc, options)
+      res.send(result)
+
+    })
+
+
+    app.patch('/notApproveClass/:id', async(req,res)=>{
+
+      const classId = req.params.id
+      const feedback = req.body.feedback
+      console.log(feedback)
+      const filter = {_id : new ObjectId(classId)}
+      
+      const options = { upsert: true };
+      const updatedoc = {
+        $set:{
+           status: "denied",
+           feedback:  feedback
+        }
+      }
+
+      const result = await classes.updateOne(filter, updatedoc, options)
+      res.send(result)
+       
+    })
+
+    
     
 
-    app.get('/user', async(req, res) => {
+    app.get('/user', verifyjwt,  async(req, res) => {
 
-      const result = await user.find().toArray();
+      if(!req.decoded.email){
+        return res.status(401).send({error: true, message: "forbidden request"})
+      }
+
+       
+      const result = await user.find().toArray();      
       res.send(result)
         
     })
-    app.patch('/userAdmin/:id', async(req, res) => {
+    app.patch('/userAdmin/:id',  async(req, res) => {
 
       const userid = req.params.id
       const updateData = req.body.Updated
@@ -110,26 +201,28 @@ async function run() {
     })
 
     // user class show with email query 
-    app.get('/showClass', async(req, res) => {
+    app.get('/showClass',  async(req, res) => {
 
         const useremail = req.query.email;
         const queryuser = {email:useremail} 
             
-        const result = await Addtocart.find(queryuser).toArray()
+        const result = await AddtoClass.find(queryuser).toArray()
         res.send(result)
     })
 
-    app.get('/insMyclass', async(req, res)=>{
+    app.get('/insMyclass',  async(req, res)=>{
 
           const email = req.query.email
+           
           const check = {instructorEmail : email}
           const result = await classes.find(check).toArray()
+          console.log(result)
           res.send(result)
 
     })
 
 
-    app.post('/user', async(req, res) => {
+    app.post('/user',  async(req, res) => {
 
        const userData = req.body
        const email = req.body.email
@@ -149,37 +242,65 @@ async function run() {
 
     })
 
-    app.get('/classes', async(re1, res) => {
+    app.get('/FindAddClass/:id',async(req, res)=>{
 
-      const result = await classes.find().sort({"enrollStudents" : -1}).limit(6).toArray();
+        const id = req.params.id;
+        console.log(id) 
+        const result = await AddtoClass.findOne({accessId : id})
+        res.send(result)
+
+    })
+
+    app.get('/classes',  async(re1, res) => {
+      const query = {status : "approved"}
+      const result = await classes.find(query).sort({"enrollStudents" : -1}).limit(6).toArray();
       res.send(result) 
     })
-    app.get('/Allclasses', async(req, res) => {
+    app.get('/Allclasses',   async(req, res) => {
 
       const query = {status : "approved"}
       const result = await classes.find(query).toArray();
       res.send(result)      
     })
-    app.get('/AllclassesAdmin', async(req, res) => {
+    app.get('/AllclassesAdmin',   async(req, res) => {
 
       
       const result = await classes.find().toArray();
       res.send(result)      
     })
 
-    app.get('/instructor', async(req, res) => {
+    app.get('/instructor',  async(req, res) => {
 
-      const result = await instructors.find().limit(6).toArray();
+      const result = await user.find({role:"instructor"}).limit(6).toArray();
       res.send(result)
     })
 
-    app.get('/Allinstructor', async(req, res) => {
+    app.get('/Allinstructor',  async(req, res) => {
 
-      const result = await instructors.find().toArray();
+      const result = await user.find({role:"instructor"}).toArray();
       res.send(result)
     })
 
 
+    // payment getware 
+    app.post("/create-payment-intent", verifyjwt, async (req, res) => {
+      const  {price}  = req.body;
+      const totalamount = price*100
+      console.log(price,totalamount)
+      // Create a PaymentIntent with the order amount and currency
+      const paymentIntent = await  stripe.paymentIntents.create({
+        amount: totalamount,
+        currency: "usd",
+        // automatic_payment_methods: ['card'],
+      }); 
+      
+      
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
+    
+ 
 
 
     await client.db("admin").command({ ping: 1 });
