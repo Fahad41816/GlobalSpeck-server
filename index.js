@@ -305,6 +305,8 @@ async function run() {
     });
 
 // payment insert 
+
+
     app.post('/payment', verifyjwt, async(req,res)=>{
 
       const {user, email, tranjecttionId, price, cartName, cartImage} = req.body;
@@ -373,6 +375,4 @@ app.get('/', (req, res) => {
 })
 
 
-app.listen(PORT, ()=>{
-    console.log('server listening ' + PORT )
-})
+app.listen(PORT)
